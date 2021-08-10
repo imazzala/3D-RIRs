@@ -95,6 +95,7 @@ class CustomDialog(QDialog):
         
         
         
+        
     #Apertura de archivos
 
     def LB_open(self):
@@ -159,9 +160,4 @@ class CustomDialog(QDialog):
         ambi.append(Fs)    
         audios = Database()
         audios.change(ambi)
-
-        
-    
-
-        
-        
+        self.close()
