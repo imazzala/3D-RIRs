@@ -18,7 +18,6 @@ from PyQt5.QtWidgets import (
     QTextEdit
     )
 
-
 class MainWindow(QMainWindow):
     
     def __init__(self, *args, **kwargs):

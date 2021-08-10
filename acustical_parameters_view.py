@@ -1,12 +1,17 @@
 import sys
+from tkinter.constants import YES
 from PyQt5 import QtCore
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import mplcursors
+from scipy.signal.filter_design import buttord
+from scipy.signal.wavelets import qmf
 import parameters
 from singleton import Database
 import pandas as pd
+from custom_dialog_mono import CustomDialogMono
+from custom_dialog_stereo import CustomDialogStereo
 
 matplotlib.use('Qt5Agg')
 
@@ -21,6 +26,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QButtonGroup,
     QMainWindow,
+    QMessageBox,
     QWidget, 
     QTabWidget,
     QDialog,
@@ -37,7 +43,14 @@ from PyQt5.QtWidgets import (
     QGroupBox
 )
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from numpy import set_string_function
+from numpy import select, set_string_function
+
+
+class CustomDialog(QDialog):
+    def __init__(self, parent = None):
+        super.__init__(parent)
+
+        self.setWindowTitle("Acústical Parameters")
 
 
 class TableModel(QtCore.QAbstractTableModel):
@@ -67,13 +80,15 @@ class TableModel(QtCore.QAbstractTableModel):
 class AcusticalParametersView(QWidget):
     def __init__(self):
         super().__init__()
-        
+      
         vLayout = QVBoxLayout()
         layout = QHBoxLayout()
-
+        
         vBox = QVBoxLayout()
         vBox.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
+        intro_text = QLabel("Si de sea calcular los parámetros acústicos de la señal \n ambisonic presione calcular, en caso de querer calcular \n una señal mono o estéreo, presione cargar nuevos audios \n y luego calcular")
+        vBox.addWidget(intro_text)
         qlabel = QLabel("Parámetros de Cálculo: ")
         vBox.addWidget(qlabel)
 
@@ -140,15 +155,19 @@ class AcusticalParametersView(QWidget):
         calc_button.setMaximumWidth(150)
         calc_button.clicked.connect(self.calculation)
 
-        export_button = QPushButton("Exportar")
+        calc_new_audio_button = QPushButton("Cargar nuevos audios")
+        calc_new_audio_button.setMaximumWidth(200)
+        calc_new_audio_button.clicked.connect(self.open_dialog)
+
+        export_button = QPushButton("Exportar Datos")
         export_button.setMaximumWidth(150)
         export_button.clicked.connect(self.export_data)
 
         Hlay.addWidget(calc_button)
-        Hlay.addWidget(export_button)
+        Hlay.addWidget(calc_new_audio_button)
+        
 
         vBox.addLayout(Hlay)
-
 
         #Grafico y Tabla
 
@@ -168,8 +187,10 @@ class AcusticalParametersView(QWidget):
 
         vLayout.addLayout(layout)
         vLayout.addWidget(self.table)
+        vLayout.addWidget(export_button)
 
         self.setLayout(vLayout)
+
 
         
     def insert_ax(self):
@@ -290,6 +311,26 @@ class AcusticalParametersView(QWidget):
         self.data.to_excel('./Acustical_Parameters.xlsx')
         self.plot_rir.figure.savefig('./RIR_y_suavizado.png')
 
+
+    def open_dialog(self):
+
+        selection = QMessageBox()
+        selection.setIcon(QMessageBox.Question)
+        selection.setWindowTitle("Selección Mono - Estereo")
+        selection.setText("¿Desea cargar una señal o mono o estéreo?")
+        selection.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        buttonY = selection.button(QMessageBox.Yes)
+        buttonY.setText("Mono")
+        buttonN  = selection.button(QMessageBox.No)
+        buttonN.setText("Estéreo")
+        selection.exec_()
+
+        if selection.clickedButton() == buttonY:
+            dlg = CustomDialogMono()
+            dlg.exec_()
+        else:
+            dlg = CustomDialogStereo()
+            dlg.exec_()
 
 
 
