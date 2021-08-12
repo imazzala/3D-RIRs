@@ -87,7 +87,7 @@ class AcusticalParametersView(QWidget):
         vBox = QVBoxLayout()
         vBox.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-        intro_text = QLabel("Si de sea calcular los parámetros acústicos de la señal \n ambisonic presione calcular, en caso de querer calcular \n una señal mono o estéreo, presione cargar nuevos audios \n y luego calcular")
+        intro_text = QLabel("Si de sea calcular los parámetros acústicos de la señal \n ambisonic presione calcular, en caso de querer calcular\n una señal mono o estéreo, presione cargar nuevos audios \n y luego calcular.")
         vBox.addWidget(intro_text)
         qlabel = QLabel("Parámetros de Cálculo: ")
         vBox.addWidget(qlabel)
