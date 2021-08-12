@@ -48,6 +48,26 @@ def cut(W,Y,fs):
         
     return Wcortada, Ycortada    
 
+def cut_M(W,fs):
+    """Recorto A partir del pico hasta el final
+    In:
+    -Canal W formato B ambisonics
+    -Canal Y formato B ambisonics 
+    -Fs 
+    Out:
+    -Canal W formato B ambisonics ya recortado a partir del pico
+    -Canal Y formato B ambisonics ya recortado a partir del pico
+    """
+        
+    W_max = np.where(abs(W) == np.max(abs(W)))[0]  #Ventana a partir del max
+    W_max = int(W_max[0])
+    Wcortada = W[(W_max)+5:]
+    
+    if len(Wcortada) / fs > 10: #Recorto en 10 seg en caso de que sea demasiado largo el archivo
+        Wcortada = Wcortada[0:int(10 * fs)]    
+       
+    return Wcortada   
+
 # Señal omnidireccional y estereo
 def stereo(Wc,Yc):
     """Obtengo L y R
@@ -129,6 +149,58 @@ def filtroter(Wc, IR_L, IR_R, fs, divi):
             filtradaR = np.vstack((fil, RIRS[i][:len(fil[0])]))
             
     return filtrada, filtradaL, filtradaR, centrosHZ
+
+def filtroter_M(Wc, fs, divi):
+    
+    """
+    Pasabando Butterworth con centros de tercios o octava dado por "divi"
+    Wcortada = RIR
+    fs = sample rate
+    divi = 1 para tercios y = 0 para octava
+    
+    Devuelve 
+    - señal Filtrada (primero los tercios o las octava y ultimo del array el canal w cortado)
+    
+    Basado en la norma: UNE-EN 61260
+    """
+     
+    W= np.flip(Wc) #Invierto la rir
+    G = 10**(3/10)
+
+    if divi == 1:
+        centrosHZ = np.array([25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315,
+                                       400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150,
+                                       4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000])
+           
+        fmin = G ** (-1/6)
+        fmax = G ** (1/6)
+        fil=[]
+    else:
+        centrosHZ = np.array([31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000])
+        
+        fmin = G ** (-1/2)
+        fmax = G ** (1/2)
+        fil=[]
+    
+    for j,fc in enumerate(centrosHZ):
+        sup = fmax*fc/(0.5*fs) #Limite superior de la banda
+        
+        if sup >= 1:
+                sup = 0.999999
+                #sup = 0.5 * fs - 1    
+        inf = fmin * fc / (0.5*fs) #Límite inferior
+
+    # Aplico el filtro IIR Butterworth de orden N
+        sos = signal.butter(N=2, Wn=np.array([inf,
+                                              sup]), btype='bandpass',output='sos')
+        filt = signal.sosfilt(sos, W)  # Filtro W
+        fil.append(filt) 
+        fil[j] = np.flip(fil[j])
+        fil[j]=fil[j][:int(len(fil[j])*0.95)] #Corto el último 5% de la señal para minimiza el efecto de borde
+        
+        filtrada = np.vstack((fil, Wc[:len(fil[0])]))
+            
+    return filtrada,centrosHZ
 
 # Calculo del tiempo de transición y el EDTt.
 def ttyedtt(x,y,fs):
@@ -416,7 +488,7 @@ def IACC_e(L, R, fs):
 #     ax.legend()
 #     return fig, ax
 
-def ac_parameters(divi,trunc,smooth,vent,W, Y, fs):
+def ac_parameters_S(divi,trunc,smooth,vent,W, Y, fs):
     #data, fs = sf.read(path)
     #ir = np.transpose(data)
     #W,Y = cut(ir[0],ir[1],fs)
@@ -460,7 +532,7 @@ def ac_parameters(divi,trunc,smooth,vent,W, Y, fs):
     #fig,ax=graphs(mono_dB[-1],ir_sm[-1],fs,smooth)
     return (Tt, EDTt, C50,C80,EDT,T20,T30,IACCe, mono_dB, ir_sm)
 
-def table(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,divi):
+def table_S(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,divi):
     import pandas as pd
     import numpy as np
     # intialise data of lists.
@@ -483,19 +555,98 @@ def table(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,divi):
      
     return df
 
-#Prueba
+def ac_parameters_M(divi,trunc,smooth,vent,W, fs):
+    #data, fs = sf.read(path)
+    #ir = np.transpose(data)
+    #W,Y = cut(ir[0],ir[1],fs)
+    W = cut_M(W,fs)
+    # Filtro de octava y tercio
+    mono, cen = filtroter_M(W, fs, divi)
+    # Guardo variables
+    ir_f = mono
+    # Energía y normalización
+    mono = E_norm(mono)
+    mono_dB = 10 * np.log10(np.abs(mono) + sys.float_info.epsilon)
+    #Calculo de parámetros
+        # Truncamiento de la RI
+    ir_tr =[]
+    ir_sm=[]
+    lb=[]
+    for i in range(len(mono)):
+        if trunc == 0: #Lundeby
+            punto_cruce,c=lundeby(mono[i],fs)
+            lb.append(punto_cruce)
+            ir_tr.append(mono[i][:punto_cruce])
+            p = mono[i].size-punto_cruce
+        else:
+            ir_tr.append(mono[i])
+            punto_cruce = mono.size
+            lb.append(punto_cruce)
+            p = 0
+        # Suavizado
+        if smooth == 0:
+            sch = schroeder(ir_tr[i],p)
+            ir_sm.append(sch)
+        elif smooth == 1:
+            mmf = mediana_movil(ir_tr[i],vent,fs,p)
+            ir_sm.append(mmf)
+    
+    Tt,EDTt = ttyedtt(ir_tr,ir_sm,fs)
+    EDT,T20,T30 = RT_parameters(ir_sm,fs)
+    C50,C80 = C_parameters(mono,fs,lb)
+    #fig,ax=graphs(mono_dB[-1],ir_sm[-1],fs,smooth)
+    return (Tt, EDTt, C50,C80,EDT,T20,T30,mono_dB, ir_sm)
+
+def table_M(Tt, EDTt, C50,C80,EDT,T20,T30,divi):
+    import pandas as pd
+    import numpy as np
+    # intialise data of lists.
+    data = np.array([EDT[:-1],T20[:-1],T30[:-1],Tt[:-1], EDTt[:-1], C50[:-1],C80[:-1]]).T
+    data = np.transpose(data)
+    # Create DataFrame
+    if divi == 0:
+        df = pd.DataFrame(data,index = ['EDT [s]','T20 [s]','T30 [s]','Tt [s]','EDTt [s]','C50[dB]','C80[dB]'],
+                      columns=['31.5', '63', '125', '250', '500', '1000', '2000', '4000', '8000', '16000'])
+        # df.index.name = 'Acoustic Parameters'
+        # df.columns.name = 'Frequency [Hz]'
+    else:
+        df = pd.DataFrame(data,index = ['EDT [s]','T20 [s]','T30 [s]','Tt [s]','EDTt [s]','C50[dB]','C80[dB]'],
+                      columns=['25', '31.5', '40', '50', '63', '80', '100', '125', '160','200', '250', '315', '400', '500',
+                               '630', '800', '1k','1.3k', '1.6k', '2k', '2.5k', '3.2k', '4k', '5k', '6.3k', '8k', '10k', 
+                               '12.5k', '16k', '20k'])
+        # df.index.name = 'Acoustic Parameters'
+        # df.columns.name = 'Frequency [Hz]'
+    print(df)
+     
+    return df
+
+# #Prueba_Stereo
+# #Definición de variables
+# path = r'D:\\Documents\\Python Scripts\\IMA\\Análisis Rirs\\stalbans_b_ortf.wav'
+# path = "/Users/ivan/Desktop/3DRirs/RI_soundfield/stalbans_b_ortf.wav"
+# divi=0 #Filtro de octava
+# divi=1 #Filtro de tercio de octava
+# trunc = 0 #Lundeby
+# trunc = 1 #None
+# smooth = 0 #Schroeder
+# smooth = 1 #mmf
+# vent = 20 #Tamaño de ventana mmf
+# Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,fig = ac_parameters_S(divi,trunc,smooth,vent,path)
+# data = table_S(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,divi)
+
+#Prueba_Mono
 #Definición de variables
-#path = r'D:\\Documents\\Python Scripts\\IMA\\Análisis Rirs\\stalbans_b_ortf.wav'
-#path = "/Users/ivan/Desktop/3DRirs/RI_soundfield/stalbans_b_ortf.wav"
-#divi=0 #Filtro de octava
-#divi=1 #Filtro de tercio de octava
-#trunc = 0 #Lundeby
-#trunc = 1 #None
-#smooth = 0 #Schroeder
-#smooth = 1 #mmf
-#vent = 20 #Tamaño de ventana mmf
-#Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,fig = ac_parameters(divi,trunc,smooth,vent,path)
-#data = table(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,divi)
+# W, fs = sf.read(r'D:\\Documents\\Python Scripts\\IMA\\Análisis Rirs\\stalbans_b_mono.wav')
+# #path = "/Users/ivan/Desktop/3DRirs/RI_soundfield/stalbans_b_ortf.wav"
+# divi=0 #Filtro de octava
+# divi=1 #Filtro de tercio de octava
+# trunc = 0 #Lundeby
+# trunc = 1 #None
+# smooth = 0 #Schroeder
+# smooth = 1 #mmf
+# vent = 20 #Tamaño de ventana mmf
+# Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,fig = ac_parameters_M(divi,trunc,smooth,vent,W,fs)
+# data = table_M(Tt, EDTt, C50,C80,EDT,T20,T30,divi)
 
 
 
