@@ -257,37 +257,42 @@ class AcusticalParametersView(QWidget):
                 pass
 
 
-    def calculation(self):
-
-        datos = Database()
-        ambi = datos.get()
-
-        LB = ambi[0]
-        LF = ambi[1]
-        RB = ambi[2]
-        RF = ambi[3]
-        fs = ambi[4]
+    def calculation(self,E,F):
         
-        BLD = LB
-        FLU = LF
-        BRU = RB
-        FRD = RF
-
-        W = FLU + FRD + BLD + BRU
-        Y = FLU - FRD + BLD - BRU
-
-        W = np.transpose(W)
-        Y = np.transpose(Y)
+        if E == 0:
+            datos = Database()
+            ambi = datos.get()
+    
+            LB = ambi[0]
+            LF = ambi[1]
+            RB = ambi[2]
+            RF = ambi[3]
+            fs = ambi[4]
+            
+            BLD = LB
+            FLU = LF
+            BRU = RB
+            FRD = RF
+    
+            W = FLU + FRD + BLD + BRU
+            Y = FLU - FRD + BLD - BRU
+    
+            W = np.transpose(W)
+            Y = np.transpose(Y)
+        elif E==1:
+            "Audios"
         
         try:
             self.vent = int(self.window_size_line.text())
         except:
             pass
 
-
-        Tt, EDTt, C50,C80,EDT,T20,T30,IACCe, ir, sm = parameters.ac_parameters(self.divi,self.trunc,self.smooth,self.vent, W, Y, fs)
-        self.data = parameters.table(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,self.divi)
-    
+        if E == 0 or E==1 and F==0:
+            Tt, EDTt, C50,C80,EDT,T20,T30,IACCe, ir, sm = parameters.ac_parameters_S(self.divi,self.trunc,self.smooth,self.vent, W, Y, fs)
+            self.data = parameters.table_S(Tt, EDTt, C50,C80,EDT,T20,T30,IACCe,self.divi)
+        elif E==1 and F==1:
+            Tt, EDTt, C50,C80,EDT,T20,T30, ir, sm = parameters.ac_parameters_M(self.divi,self.trunc,self.smooth,self.vent, W, fs)
+            self.data = parameters.table_M(Tt, EDTt, C50,C80,EDT,T20,T30,self.divi) 
         self.model = TableModel(self.data)
         self.table.setModel(self.model)
         
