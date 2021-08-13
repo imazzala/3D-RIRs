@@ -24,3 +24,5 @@ class Database(Singleton):
     def load(self, data):
         self._data = data
         
+    def clear(self):
+        self._data = []

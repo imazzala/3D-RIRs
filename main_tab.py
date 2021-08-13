@@ -38,7 +38,6 @@ from PyQt5.QtWidgets import (
     QRadioButton,
 )
 
-
 class MainTab(QWidget):
     def __init__(self):
         super().__init__()

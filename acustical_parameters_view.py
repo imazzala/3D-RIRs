@@ -1,5 +1,6 @@
 import sys
 from tkinter.constants import YES
+from typing import Tuple
 from PyQt5 import QtCore
 import matplotlib.pyplot as plt
 import matplotlib
@@ -87,10 +88,24 @@ class AcusticalParametersView(QWidget):
         vBox = QVBoxLayout()
         vBox.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-        intro_text = QLabel("Si de sea calcular los parámetros acústicos de la señal \n ambisonic presione calcular, en caso de querer calcular\n una señal mono o estéreo, presione cargar nuevos audios \n y luego calcular.")
-        vBox.addWidget(intro_text)
         qlabel = QLabel("Parámetros de Cálculo: ")
         vBox.addWidget(qlabel)
+
+        ambi_si_no_box = QGroupBox("¿Desea calcular los parámetros\n acústicos de la señal ambisonic?")
+        ambi_si_no_box.setMaximumWidth(230)
+        ambi_si_no_box.setLayout(QHBoxLayout())
+
+        self.E = 0
+        self.boton_si = QRadioButton("Sí")
+        self.boton_si.setChecked(True)
+        self.boton_si.toggled.connect(lambda: self.ambisoic_measure(self.boton_si))
+
+        self.boton_no = QRadioButton("No")
+        self.boton_no.toggled.connect(lambda: self.ambisoic_measure(self.boton_no))
+
+        ambi_si_no_box.layout().addWidget(self.boton_si)
+        ambi_si_no_box.layout().addWidget(self.boton_no)
+        vBox.addWidget(ambi_si_no_box)
 
         self.trunc = 0
         lundeby_box = QGroupBox('Truncar por Lundeby')
@@ -242,7 +257,7 @@ class AcusticalParametersView(QWidget):
     def suavizado_selection(self, b):
 
         b = self.sender()
-        if b.text() == "Schroeder":
+        if b.text() == "Sí":
 
             if b.isChecked() == True: 
                 self.smooth = 0
@@ -257,11 +272,15 @@ class AcusticalParametersView(QWidget):
                 pass
 
 
-    def calculation(self,E,F):
-        
-        if E == 0:
+    def calculation(self):
+        global E
+        E = self.E
+        print("El valor de E", E)
+
+        if  E == 0:
             datos = Database()
             ambi = datos.get()
+            print(ambi)
     
             LB = ambi[0]
             LF = ambi[1]
@@ -278,10 +297,31 @@ class AcusticalParametersView(QWidget):
             Y = FLU - FRD + BLD - BRU
     
             W = np.transpose(W)
-            Y = np.transpose(Y)
+            Y = np.transpose(Y)       
+
+
         elif E==1:
-            "Audios"
-        
+            if F == 0:
+                datos = Database()
+                audio = datos.get()
+                print(audio)
+
+                W = audio[0]
+                Y = audio[1]
+                fs = audio[2]
+                
+                W = np.transpose(W)
+                Y = np.transpose(Y)
+
+            else: 
+                datos = Database()
+                audio = datos.get()
+                print(audio)
+                W = audio[0]
+                fs = audio[1]
+
+                W = np.transpose(W)
+
         try:
             self.vent = int(self.window_size_line.text())
         except:
@@ -317,8 +357,29 @@ class AcusticalParametersView(QWidget):
         self.plot_rir.figure.savefig('./RIR_y_suavizado.png')
 
 
+    def ambisoic_measure(self, b):
+        
+        b = self.sender()
+        if b.text() == "Sí":
+
+            if b.isChecked() == True: 
+                self.E = 0
+            else:
+                pass
+
+        if b.text() == "No":
+            
+            if b.isChecked() == True:
+                self.E = 1                
+            else: 
+                pass
+ 
+
+
     def open_dialog(self):
 
+        global E
+        global F
         selection = QMessageBox()
         selection.setIcon(QMessageBox.Question)
         selection.setWindowTitle("Selección Mono - Estereo")
@@ -331,9 +392,13 @@ class AcusticalParametersView(QWidget):
         selection.exec_()
 
         if selection.clickedButton() == buttonY:
+            E = 1
+            F = 1
             dlg = CustomDialogMono()
             dlg.exec_()
         else:
+            E = 1
+            F = 0
             dlg = CustomDialogStereo()
             dlg.exec_()
 
