@@ -39,6 +39,11 @@ from PyQt5.QtWidgets import (
 )
 
 class MainTab(QWidget):
+    """
+    Pantalla Principal de la app donde se visualiza
+    la rir 3D
+    """
+
     def __init__(self):
         super().__init__()
 

@@ -9,6 +9,11 @@ class Singleton:
 
 class Database(Singleton):
 
+    """
+    Patron Singleton para tener acceso desde cualquier 
+    archivo a los datos de ambisonic
+    """
+
     def __init__(self):
         Singleton.__init__(self)
 

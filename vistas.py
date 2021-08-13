@@ -22,6 +22,11 @@ from PyQt5.QtWidgets import (
 
 
 class Vistas(QWidget):
+    """
+    Pantalla de visualizacion de la RIR 3D sobre una vista de planta 
+    de la locacion donde se realiza la medicion
+    """
+
     def __init__(self):
         super().__init__()
         

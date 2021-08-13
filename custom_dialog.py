@@ -20,7 +20,10 @@ from PyQt5.QtWidgets import (
 
 
 class CustomDialog(QDialog):
-    
+    """
+    Ventana de donde se cargan los archivos ambisonic
+    """
+
     LB_path = pyqtSignal(str)
     LF_path = pyqtSignal(str)
     RF_path = pyqtSignal(str)

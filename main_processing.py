@@ -12,6 +12,10 @@ from scipy.signal import kaiserord, lfilter, firwin, freqz,filtfilt
 
 class MainProcessing: 
 
+    """"
+    Clase donde se ejecuta el procesamiento para obtener la RIR 3D 
+    """
+
     def __init__(self, BLD, FLU, BRU, FRD, time, Fs, integration_time):
 
         self.BLD = BLD

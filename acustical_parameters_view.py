@@ -79,6 +79,10 @@ class TableModel(QtCore.QAbstractTableModel):
 
 
 class AcusticalParametersView(QWidget):
+    """
+    Pantalla de visualizacion de los parametros acusticos
+    """
+
     def __init__(self):
         super().__init__()
       
