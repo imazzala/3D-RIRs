@@ -144,7 +144,7 @@ class AcusticalParametersView(QWidget):
         vBox.addWidget(suavizado_box)
 
         self.smooth = 0
-        filtrado_box = QGroupBox('Suavizado')
+        filtrado_box = QGroupBox('Filtros')
         filtrado_box.setMaximumWidth(230)
         filtrado_box.setLayout(QHBoxLayout()) 
         
