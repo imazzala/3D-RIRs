@@ -110,9 +110,5 @@ This project is licensed under the MIT License.
 
 ## Contact
 
-For questions, suggestions, or support, please contact imazzala.
-
-
-
-
+For questions, suggestions, or support, please contact [imazzala](https://github.com/imazzala)
 
